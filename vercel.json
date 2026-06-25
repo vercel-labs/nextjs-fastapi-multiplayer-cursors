@@ -1,0 +1,14 @@
+{
+  "experimentalServices": {
+    "web": {
+      "entrypoint": ".",
+      "routePrefix": "/",
+      "framework": "nextjs"
+    },
+    "api": {
+      "entrypoint": "flask/main.py",
+      "routePrefix": "/server",
+      "maxDuration": 900
+    }
+  }
+}

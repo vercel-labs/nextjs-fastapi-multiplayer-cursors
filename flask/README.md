@@ -1,0 +1,59 @@
+# Flask Starter
+
+Deploy your [Flask](https://flask.palletsprojects.com/) project to Vercel with zero configuration.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?demo-description=Deploy%20Python%20Flask%20applications%20with%20zero%20configuration.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F54Zhp672eFRUqepOakJ0qU%2F8894990170d1edb4a0287a0b7ce79dff%2FFlask_Light.png&demo-title=Flask%20Boilerplate&demo-url=https%3A%2F%2Fvercel-plus-flask.vercel.app%2F&from=templates&project-name=Flask%20Boilerplate&project-names=Comma%20separated%20list%20of%20project%20names%2Cto%20match%20the%20root-directories&repository-name=flask-python-boilerplate&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fexamples%2Ftree%2Fmain%2Fpython%2Fflask&root-directories=List%20of%20directory%20paths%20for%20the%20directories%20to%20clone%20into%20projects&skippable-integrations=1&teamSlug=zero-conf-vtest314)
+
+_Live Example: https://vercel-plus-flask.vercel.app/_
+
+Visit the [Flask documentation](https://flask.palletsprojects.com/) to learn more.
+
+## Project Structure
+
+This example follows the [application factory](https://flask.palletsprojects.com/en/stable/tutorial/factory/) pattern from the Flask tutorial:
+
+```
+├── main.py              # Application factory and entry point
+├── items.py             # Items blueprint with API routes
+├── templates/
+│   └── index.html       # Landing page template
+├── public/
+│   └── favicon.ico
+├── pyproject.toml
+└── README.md
+```
+
+## Getting Started
+
+Install the required dependencies using [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync
+```
+
+## Running Locally
+
+```bash
+vercel dev
+```
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Landing page |
+| `GET` | `/api/data` | List sample items |
+| `GET` | `/api/items/<item_id>` | Get item by ID |
+
+## Deploying to Vercel
+
+Deploy your project to Vercel with the following command:
+
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+Or `git push` to your repository with our [git integration](https://vercel.com/docs/deployments/git).
+
+To view the source code for this template, [visit the example repository](https://github.com/vercel/vercel/tree/main/examples/flask).

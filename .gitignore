@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/.venv
+.venv/
 /.pnp
 .pnp.*
 .yarn/*
@@ -19,6 +21,12 @@
 
 # production
 /build
+build/
+*.egg-info/
+
+# python
+__pycache__/
+*.py[cod]
 
 # misc
 .DS_Store
