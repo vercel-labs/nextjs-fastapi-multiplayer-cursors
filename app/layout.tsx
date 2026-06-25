@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Realtime Collab Board",
-  description: "A Next.js and Flask websocket collaboration demo.",
+  description: "A Next.js and FastAPI websocket collaboration demo.",
 };
 
 export default function RootLayout({

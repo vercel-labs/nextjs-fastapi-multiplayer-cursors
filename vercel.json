@@ -6,7 +6,7 @@
       "framework": "nextjs"
     },
     "api": {
-      "entrypoint": "flask/main.py",
+      "entrypoint": "backend/app/main.py",
       "routePrefix": "/server",
       "framework": "fastapi",
       "maxDuration": 900

@@ -22,6 +22,7 @@ PRESENCE_ACTIVITY_KEY = "collab:presence:activity"
 PRESENCE_CHANNEL = "collab:presence:events"
 STALE_AFTER_SECONDS = 120
 INSTANCE_ID = uuid.uuid4().hex
+CURSOR_SNAPSHOT_INTERVAL_SECONDS = 0.75
 
 
 @dataclass
@@ -163,6 +164,8 @@ class RedisPresenceStore:
 
 clients: dict[str, WebSocket] = {}
 clients_lock = asyncio.Lock()
+cursor_snapshot_tasks: dict[str, asyncio.Task[None]] = {}
+cursor_snapshot_lock = asyncio.Lock()
 store: PresenceStore | None = None
 store_lock = asyncio.Lock()
 
@@ -215,14 +218,19 @@ async def websocket_endpoint(websocket: WebSocket):
                 participant.x = clamp_float(message.get("x"), fallback=participant.x)
                 participant.y = clamp_float(message.get("y"), fallback=participant.y)
                 participant.updated_at = time.time()
-                await presence_store.upsert(participant)
-                await announce({"type": "cursor", "user": serialize_user(participant)}, skip_id=participant.id)
+                await announce_realtime(
+                    presence_store,
+                    {"type": "cursor", "user": serialize_user(participant)},
+                    skip_id=participant.id,
+                )
+                await schedule_cursor_snapshot(presence_store, participant)
     except WebSocketDisconnect:
         pass
     finally:
         async with clients_lock:
             clients.pop(participant.id, None)
 
+        await cancel_cursor_snapshot(participant.id)
         await presence_store.remove(participant.id)
         await announce({"type": "leave", "id": participant.id})
 
@@ -259,6 +267,11 @@ async def announce(payload: dict[str, Any], skip_id: str | None = None) -> None:
     await (await get_store()).publish(payload)
 
 
+async def announce_realtime(presence_store: PresenceStore, payload: dict[str, Any], skip_id: str | None = None) -> None:
+    await broadcast(payload, skip_id=skip_id)
+    schedule_background(presence_store.publish(payload), "publish realtime cursor event")
+
+
 async def handle_remote_event(payload: dict[str, Any]) -> None:
     await broadcast(payload)
 
@@ -282,6 +295,59 @@ async def broadcast(payload: dict[str, Any], skip_id: str | None = None) -> None
         async with clients_lock:
             for participant_id in stale_client_ids:
                 clients.pop(participant_id, None)
+
+
+async def schedule_cursor_snapshot(presence_store: PresenceStore, participant: Participant) -> None:
+    if presence_store.label == "memory":
+        return
+
+    async with cursor_snapshot_lock:
+        task = cursor_snapshot_tasks.get(participant.id)
+        if task and not task.done():
+            return
+
+        cursor_snapshot_tasks[participant.id] = schedule_background(
+            persist_cursor_snapshot(presence_store, participant),
+            "persist throttled cursor snapshot",
+        )
+
+
+async def persist_cursor_snapshot(presence_store: PresenceStore, participant: Participant) -> None:
+    try:
+        await asyncio.sleep(CURSOR_SNAPSHOT_INTERVAL_SECONDS)
+        await presence_store.upsert(participant)
+    finally:
+        current_task = asyncio.current_task()
+        async with cursor_snapshot_lock:
+            if cursor_snapshot_tasks.get(participant.id) is current_task:
+                cursor_snapshot_tasks.pop(participant.id, None)
+
+
+async def cancel_cursor_snapshot(participant_id: str) -> None:
+    async with cursor_snapshot_lock:
+        task = cursor_snapshot_tasks.pop(participant_id, None)
+
+    if task:
+        task.cancel()
+
+
+def schedule_background(coro: Any, description: str) -> asyncio.Task[None]:
+    task = asyncio.create_task(coro)
+
+    def log_error(completed_task: asyncio.Task[None]) -> None:
+        if completed_task.cancelled():
+            return
+
+        error = completed_task.exception()
+        if error:
+            logger.error(
+                "Background collaboration task failed: %s",
+                description,
+                exc_info=(type(error), error, error.__traceback__),
+            )
+
+    task.add_done_callback(log_error)
+    return task
 
 
 def parse_message(raw_message: Any) -> dict[str, Any] | None:

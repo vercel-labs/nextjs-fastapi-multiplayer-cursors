@@ -8,6 +8,4 @@ __pycache__/
 .Python
 .DS_Store
 .env*
-!.env.example
-instance/
 .vercel

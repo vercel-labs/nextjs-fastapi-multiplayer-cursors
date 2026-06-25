@@ -1,6 +1,7 @@
 "use client";
 
-import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { PerfectCursor } from "perfect-cursors";
+import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type PresenceUser = {
   id: string;
@@ -9,6 +10,11 @@ type PresenceUser = {
   x: number;
   y: number;
   updatedAt: number;
+};
+
+type BoardSize = {
+  width: number;
+  height: number;
 };
 
 type SocketMessage =
@@ -20,17 +26,22 @@ type SocketMessage =
 const colors = ["#2563eb", "#dc2626", "#16a34a", "#ca8a04", "#7c3aed", "#0891b2"];
 const names = ["Mira", "Kai", "Rin", "Avery", "Noor", "Sol", "Ira", "Jules"];
 const sessionUserKey = "collab-session-user";
+const cursorSendIntervalMs = 80;
 
 export function CollabCanvas() {
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef(800);
   const lastSentAtRef = useRef(0);
+  const pendingCursorRef = useRef<{ x: number; y: number } | null>(null);
+  const cursorSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [connectionState, setConnectionState] = useState<"connecting" | "open" | "closed">("connecting");
+  const [boardSize, setBoardSize] = useState<BoardSize>({ width: 0, height: 0 });
   const [users, setUsers] = useState<Record<string, PresenceUser>>({});
   const [self, setSelf] = useState<PresenceUser>(defaultUser);
+  const selfRef = useRef(self);
   const selfId = self.id;
   const selfName = self.name;
   const selfColor = self.color;
@@ -44,6 +55,10 @@ export function CollabCanvas() {
   );
 
   useEffect(() => {
+    selfRef.current = self;
+  }, [self]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       setSelf(createLocalUser());
       setIsReady(true);
@@ -51,6 +66,35 @@ export function CollabCanvas() {
 
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) {
+      return;
+    }
+
+    const updateBoardSize = () => {
+      const rect = board.getBoundingClientRect();
+      setBoardSize((currentSize) => {
+        if (currentSize.width === rect.width && currentSize.height === rect.height) {
+          return currentSize;
+        }
+
+        return { width: rect.width, height: rect.height };
+      });
+    };
+
+    updateBoardSize();
+
+    const observer = new ResizeObserver(updateBoardSize);
+    observer.observe(board);
+    window.addEventListener("resize", updateBoardSize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateBoardSize);
+    };
+  }, [isReady]);
 
   useEffect(() => {
     if (!isReady) {
@@ -110,9 +154,49 @@ export function CollabCanvas() {
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
       }
+      if (cursorSendTimerRef.current) {
+        clearTimeout(cursorSendTimerRef.current);
+      }
       socketRef.current?.close();
     };
   }, [isReady, selfId, selfName, selfColor]);
+
+  const flushCursor = () => {
+    cursorSendTimerRef.current = null;
+
+    const pendingCursor = pendingCursorRef.current;
+    const socket = socketRef.current;
+
+    if (!pendingCursor || !socket || socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    pendingCursorRef.current = null;
+    lastSentAtRef.current = Date.now();
+
+    const nextSelf = { ...selfRef.current, ...pendingCursor, updatedAt: Date.now() / 1000 };
+    setSelf(nextSelf);
+    setUsers((currentUsers) => ({ ...currentUsers, [nextSelf.id]: nextSelf }));
+    socket.send(JSON.stringify({ type: "cursor", x: pendingCursor.x, y: pendingCursor.y }));
+  };
+
+  const scheduleCursorSend = (x: number, y: number) => {
+    pendingCursorRef.current = { x, y };
+
+    if (cursorSendTimerRef.current) {
+      return;
+    }
+
+    const elapsed = Date.now() - lastSentAtRef.current;
+    const delay = Math.max(cursorSendIntervalMs - elapsed, 0);
+
+    if (delay === 0) {
+      flushCursor();
+      return;
+    }
+
+    cursorSendTimerRef.current = setTimeout(flushCursor, delay);
+  };
 
   const sendCursor = (event: PointerEvent<HTMLDivElement>) => {
     const board = boardRef.current;
@@ -122,20 +206,10 @@ export function CollabCanvas() {
       return;
     }
 
-    const now = Date.now();
-    if (now - lastSentAtRef.current < 24) {
-      return;
-    }
-    lastSentAtRef.current = now;
-
     const rect = board.getBoundingClientRect();
     const x = clamp((event.clientX - rect.left) / rect.width);
     const y = clamp((event.clientY - rect.top) / rect.height);
-    const nextSelf = { ...self, x, y, updatedAt: Date.now() / 1000 };
-
-    setSelf(nextSelf);
-    setUsers((currentUsers) => ({ ...currentUsers, [selfId]: nextSelf }));
-    socket.send(JSON.stringify({ type: "cursor", x, y }));
+    scheduleCursorSend(x, y);
   };
 
   const updateName = (name: string) => {
@@ -201,7 +275,7 @@ export function CollabCanvas() {
                 <div className="bg-[#f6c744] p-4 text-sm font-medium shadow-[4px_4px_0_rgba(29,28,24,0.25)]">
                   Sketch shared cursor presence
                 </div>
-                <div className="border border-[#b6aa95] bg-white p-4 text-sm text-[#6c665b]">Flask holds memory first. Redis later.</div>
+                <div className="border border-[#b6aa95] bg-white p-4 text-sm text-[#6c665b]">FastAPI holds memory first. Redis later.</div>
                 <div className="col-span-2 border border-dashed border-[#9c927f] bg-[#f8f4ea] p-4 text-sm text-[#6c665b]">
                   A lightweight protocol keeps the realtime path easy to swap.
                 </div>
@@ -221,7 +295,7 @@ export function CollabCanvas() {
             </div>
 
             {otherUsers.map((user) => (
-              <RemoteCursor key={user.id} user={user} />
+              <RemoteCursor key={user.id} boardSize={boardSize} user={user} />
             ))}
           </div>
 
@@ -244,11 +318,42 @@ export function CollabCanvas() {
   );
 }
 
-function RemoteCursor({ user }: { user: PresenceUser }) {
+function RemoteCursor({ boardSize, user }: { boardSize: BoardSize; user: PresenceUser }) {
+  const cursorRef = useRef<HTMLDivElement | null>(null);
+  const perfectCursorRef = useRef<PerfectCursor | null>(null);
+  const { height, width } = boardSize;
+  const { x, y } = user;
+  const [initialPoint] = useState(() => [x * width, y * height]);
+
+  const moveCursor = useCallback((point: number[]) => {
+    const cursor = cursorRef.current;
+    if (!cursor) {
+      return;
+    }
+
+    cursor.style.transform = getCursorTransform(point);
+  }, []);
+
+  useEffect(() => {
+    const perfectCursor = new PerfectCursor(moveCursor);
+    perfectCursorRef.current = perfectCursor;
+    perfectCursor.addPoint(initialPoint);
+
+    return () => {
+      perfectCursor.dispose();
+      perfectCursorRef.current = null;
+    };
+  }, [initialPoint, moveCursor]);
+
+  useEffect(() => {
+    perfectCursorRef.current?.addPoint([x * width, y * height]);
+  }, [height, width, x, y]);
+
   return (
     <div
-      className="pointer-events-none absolute z-10 -translate-x-[5px] -translate-y-[4px] transition-[left,top] duration-100 ease-linear"
-      style={{ left: `${user.x * 100}%`, top: `${user.y * 100}%` }}
+      ref={cursorRef}
+      className="pointer-events-none absolute left-0 top-0 z-10 will-change-transform"
+      style={{ transform: getCursorTransform(initialPoint) }}
     >
       <svg
         aria-hidden="true"
@@ -271,6 +376,10 @@ function RemoteCursor({ user }: { user: PresenceUser }) {
       </div>
     </div>
   );
+}
+
+function getCursorTransform(point: number[]) {
+  return `translate3d(${point[0]}px, ${point[1]}px, 0) translate(-5px, -4px)`;
 }
 
 function PresenceRow({ user, label }: { user: PresenceUser; label?: string }) {
