@@ -34,7 +34,7 @@ uv sync
 ## Running Locally
 
 ```bash
-vercel dev
+REDIS_URL=redis://localhost:6379/0 flask --app main run --debug --port 5001
 ```
 
 ## API Endpoints
@@ -44,6 +44,14 @@ vercel dev
 | `GET` | `/` | Landing page |
 | `GET` | `/api/data` | List sample items |
 | `GET` | `/api/items/<item_id>` | Get item by ID |
+| `GET` | `/api/presence` | Current presence snapshot and active state store |
+| `GET` | `/ws` | WebSocket endpoint for cursor presence |
+
+## Redis
+
+Set `REDIS_URL` for Redis-backed presence state and pub/sub. Without it, the app falls back to process memory.
+
+For Vercel Services, add `REDIS_URL` at the project level in Vercel Environment Variables. The Flask service receives the same project env vars as the Next.js service.
 
 ## Deploying to Vercel
 
