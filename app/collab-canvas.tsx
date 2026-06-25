@@ -330,7 +330,7 @@ function defaultUser(): PresenceUser {
 }
 
 function createWebSocketUrl(user: Pick<PresenceUser, "id" | "name" | "color">) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "/server";
+  const baseUrl = process.env.NEXT_PUBLIC_WS_URL ?? "/server";
   const url = new URL(`${baseUrl.replace(/\/$/, "")}/ws`, window.location.origin);
 
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";

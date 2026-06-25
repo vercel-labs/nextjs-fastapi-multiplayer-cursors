@@ -8,6 +8,7 @@
     "api": {
       "entrypoint": "flask/main.py",
       "routePrefix": "/server",
+      "framework": "fastapi",
       "maxDuration": 900
     }
   }

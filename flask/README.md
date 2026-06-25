@@ -1,20 +1,13 @@
-# Flask Starter
+# Python Realtime API
 
-Deploy your [Flask](https://flask.palletsprojects.com/) project to Vercel with zero configuration.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?demo-description=Deploy%20Python%20Flask%20applications%20with%20zero%20configuration.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F54Zhp672eFRUqepOakJ0qU%2F8894990170d1edb4a0287a0b7ce79dff%2FFlask_Light.png&demo-title=Flask%20Boilerplate&demo-url=https%3A%2F%2Fvercel-plus-flask.vercel.app%2F&from=templates&project-name=Flask%20Boilerplate&project-names=Comma%20separated%20list%20of%20project%20names%2Cto%20match%20the%20root-directories&repository-name=flask-python-boilerplate&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fexamples%2Ftree%2Fmain%2Fpython%2Fflask&root-directories=List%20of%20directory%20paths%20for%20the%20directories%20to%20clone%20into%20projects&skippable-integrations=1&teamSlug=zero-conf-vtest314)
-
-_Live Example: https://vercel-plus-flask.vercel.app/_
-
-Visit the [Flask documentation](https://flask.palletsprojects.com/) to learn more.
+This service hosts the realtime collaboration WebSocket and presence snapshot endpoints for the Next.js app.
 
 ## Project Structure
 
-This example follows the [application factory](https://flask.palletsprojects.com/en/stable/tutorial/factory/) pattern from the Flask tutorial:
-
 ```
-├── main.py              # Application factory and entry point
-├── items.py             # Items blueprint with API routes
+├── main.py              # FastAPI app and entry point
+├── collaboration.py     # WebSocket presence state and Redis pub/sub
+├── items.py             # Sample API routes
 ├── templates/
 │   └── index.html       # Landing page template
 ├── public/
@@ -34,7 +27,7 @@ uv sync
 ## Running Locally
 
 ```bash
-REDIS_URL=redis://localhost:6379/0 flask --app main run --debug --port 5001
+REDIS_URL=redis://localhost:6379/0 uvicorn main:app --reload --port 5001
 ```
 
 ## API Endpoints
@@ -51,7 +44,7 @@ REDIS_URL=redis://localhost:6379/0 flask --app main run --debug --port 5001
 
 Set `REDIS_URL` for Redis-backed presence state and pub/sub. Without it, the app falls back to process memory.
 
-For Vercel Services, add `REDIS_URL` at the project level in Vercel Environment Variables. The Flask service receives the same project env vars as the Next.js service.
+For Vercel Services, add `REDIS_URL` at the project level in Vercel Environment Variables. The Python service receives the same project env vars as the Next.js service.
 
 ## Deploying to Vercel
 
