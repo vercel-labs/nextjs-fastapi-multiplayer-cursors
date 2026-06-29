@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-fastapi-real-time-collab-frontend",
+  "name": "nextjs-fastapi-multiplayer-cursors-frontend",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.13.1",
