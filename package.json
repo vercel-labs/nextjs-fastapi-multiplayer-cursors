@@ -1,28 +1,10 @@
 {
-  "name": "nextjs-fastapi-real-time-collab",
+  "name": "nextjs-fastapi-real-time-collab-workspace",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.13.1",
   "scripts": {
-    "dev": "next dev",
-    "dev:services": "vercel dev -L",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.2.9",
-    "perfect-cursors": "^1.0.5",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "build": "pnpm --dir frontend build",
+    "lint": "pnpm --dir frontend lint"
   }
 }

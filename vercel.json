@@ -1,15 +1,17 @@
 {
-  "experimentalServices": {
+  "services": {
     "web": {
-      "entrypoint": ".",
-      "routePrefix": "/",
+      "root": "frontend/",
       "framework": "nextjs"
     },
     "api": {
-      "entrypoint": "backend/app/main.py",
-      "routePrefix": "/server",
-      "framework": "fastapi",
-      "maxDuration": 900
+      "root": "backend/",
+      "entrypoint": "app.main:app",
+      "framework": "fastapi"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/server/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
 }
